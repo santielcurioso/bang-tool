@@ -586,7 +586,9 @@ document.getElementById('searchBtn').addEventListener('click', ()=>{ var e=docum
 document.getElementById('emailInput').addEventListener('keydown', e=>{ if(e.key==='Enter'){ var em=e.target.value.trim(); if(em) lookupPlayer(em); }});
 
 // ── init ──────────────────────────────────────────────────────────────────────
-if (getToken()) { showApp(); } else { showLogin(); }
+var DEFAULT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEyLCJ1c2VybmFtZSI6InNhbnRpYWd1aXRvLnNybDc2QGdtYWlsLmNvbSIsInR5cGUiOiJsb2dpbiIsInBlcm1pc3Npb24iOnsiQU1PRSI6W10sIkJvbnVzIjpbXSwiUGxheWVycyI6WyJSIiwiVSIsIlQiXSwiUmVwb3J0cyI6WyJSIl0sIlBhY2thZ2VzIjpbXSwiQ2hhdE1vZHVsZSI6W10sIkFkbWluaXN0cmF0b3IiOltdLCJQYXltZW50U3dpdGNoIjpbXSwiQmxvY2tJcEFkZHJlc3MiOltdLCJQYXltZW50R2F0ZXdheSI6W10sIkFmZmlsaWF0ZU1vZHVsZSI6W10sIkNvdW50cmllc1N0YXRlcyI6W10sIkFwcENvbmZpZ3VyYXRpb24iOltdLCJDYXNpbm9NYW5hZ2VtZW50IjpbXSwiUGxheWVyRW5nYWdlbWVudCI6W10sIkNvbnRlbnRNYW5hZ2VtZW50IjpbXX0sImlhdCI6MTc3NzIzMTQ2NCwiZXhwIjo0MjkxNDgzODg5fQ.Hll24k_egjAy9peV29XKYykjHj3T3JTYbO9XnMhNzqU';
+if (!getToken()) saveToken(DEFAULT_TOKEN);
+showApp();
 </script>
 </body>
 </html>
