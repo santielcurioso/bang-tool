@@ -3,9 +3,3 @@
   to = "https://bo-api.bangcoins.com/api/:splat"
   status = 200
   force = true
-  headers = {X-From = "netlify"}
-
-  [redirects.headers]
-    Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
-    Access-Control-Allow-Headers = "Authorization, Content-Type, Accept"
