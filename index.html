@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bang Tool">
+<title>Bang Companion</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f1a;
+    --surface: #181828;
+    --surface2: #1f1f35;
+    --border: #2a2a45;
+    --accent: #7c6fff;
+    --accent2: #a99fff;
+    --text: #e8e8f0;
+    --text2: #8888aa;
+    --green: #3dd68c;
+    --green-bg: #0d2b1f;
+    --red: #ff6b6b;
+    --red-bg: #2b0d0d;
+    --yellow: #ffd166;
+    --yellow-bg: #2b220d;
+    --blue: #60a5fa;
+    --blue-bg: #0d1e2b;
+    --orange: #fb923c;
+    --orange-bg: #2b1505;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    overscroll-behavior: none;
+  }
+
+  /* TOP BAR */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(15,15,26,0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .topbar-logo {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px; color: #fff; flex-shrink: 0;
+  }
+  .topbar-title { font-weight: 700; font-size: 16px; letter-spacing: -0.3px; flex: 1; }
+  .topbar-status {
+    font-size: 11px; font-family: 'DM Mono', monospace;
+    padding: 3px 8px; border-radius: 999px;
+    background: var(--green-bg); color: var(--green);
+    border: 1px solid rgba(61,214,140,0.2);
+  }
+  .topbar-status.checking { background: var(--yellow-bg); color: var(--yellow); border-color: rgba(255,209,102,0.2); }
+  .topbar-status.error { background: var(--red-bg); color: var(--red); border-color: rgba(255,107,107,0.2); }
+
+  /* SEARCH */
+  .search-wrap { padding: 14px 16px 0; }
+  .search-row { display: flex; gap: 8px; }
+  .search-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 15px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-input::placeholder { color: var(--text2); }
+  .search-input:focus { border-color: var(--accent); }
+  .search-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 12px 18px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .search-btn:active { opacity: 0.75; }
+
+  /* CONTENT */
+  .content { padding: 14px 16px 40px; }
+
+  .placeholder {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text2);
+  }
+  .placeholder-icon { font-size: 40px; margin-bottom: 12px; }
+  .placeholder p { font-size: 14px; line-height: 1.5; }
+
+  .loading-wrap {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 60px 20px; gap: 12px;
+  }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-wrap p { color: var(--text2); font-size: 14px; }
+
+  .error-box {
+    background: var(--red-bg);
+    border: 1px solid rgba(255,107,107,0.25);
+    border-radius: var(--radius);
+    padding: 16px;
+    color: var(--red);
+    font-size: 14px;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .card-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #a99fff);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 17px; color: #fff; flex-shrink: 0;
+  }
+  .player-name { font-weight: 700; font-size: 16px; letter-spacing: -0.3px; }
+  .player-username { font-size: 12px; color: var(--text2); margin-top: 1px; }
+  .badges { display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
+  .badge {
+    font-size: 10px; font-weight: 600; padding: 2px 8px;
+    border-radius: 999px; text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .badge-active { background: var(--green-bg); color: var(--green); }
+  .badge-inactive { background: var(--surface2); color: var(--text2); }
+  .badge-promo-yes { background: rgba(124,111,255,0.15); color: var(--accent2); }
+  .badge-promo-no { background: var(--red-bg); color: var(--red); }
+
+  .card-body { padding: 14px 16px; }
+
+  /* GGR */
+  .ggr-row {
+    background: linear-gradient(135deg, #1a1535, #221a45);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+    border: 1px solid rgba(124,111,255,0.2);
+  }
+  .ggr-label { font-size: 11px; font-weight: 600; color: var(--accent2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .ggr-val { font-size: 22px; font-weight: 700; color: #fff; font-family: 'DM Mono', monospace; }
+
+  /* INFO GRID */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .info-item { }
+  .info-label { font-size: 10px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
+  .info-val { font-size: 13px; font-weight: 600; color: var(--text); }
+
+  /* SECTION */
+  .section-label {
+    font-size: 10px; font-weight: 700; color: var(--text2);
+    text-transform: uppercase; letter-spacing: 0.6px;
+    margin-bottom: 8px; margin-top: 4px;
+  }
+
+  /* METRICS */
+  .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .metric { border-radius: var(--radius-sm); padding: 10px 12px; }
+  .metric-label { font-size: 10px; margin-bottom: 3px; font-weight: 500; }
+  .metric-val { font-size: 15px; font-weight: 700; font-family: 'DM Mono', monospace; }
+  .m-green { background: var(--green-bg); border: 1px solid rgba(61,214,140,0.2); }
+  .m-green .metric-label { color: var(--green); }
+  .m-green .metric-val { color: #7fffc4; }
+  .m-red { background: var(--red-bg); border: 1px solid rgba(255,107,107,0.2); }
+  .m-red .metric-label { color: var(--red); }
+  .m-red .metric-val { color: #ffaaaa; }
+  .m-yellow { background: var(--yellow-bg); border: 1px solid rgba(255,209,102,0.2); }
+  .m-yellow .metric-label { color: var(--yellow); }
+  .m-yellow .metric-val { color: #ffe599; }
+  .m-blue { background: var(--blue-bg); border: 1px solid rgba(96,165,250,0.2); }
+  .m-blue .metric-label { color: var(--blue); }
+  .m-blue .metric-val { color: #93c5fd; }
+  .m-orange { background: var(--orange-bg); border: 1px solid rgba(251,146,60,0.2); }
+  .m-orange .metric-label { color: var(--orange); }
+  .m-orange .metric-val { color: #fdba74; }
+  .m-purple { background: rgba(124,111,255,0.08); border: 1px solid rgba(124,111,255,0.2); }
+  .m-purple .metric-label { color: var(--accent2); }
+  .m-purple .metric-val { color: var(--accent2); }
+  .m-default { background: var(--surface2); border: 1px solid var(--border); }
+  .m-default .metric-label { color: var(--text2); }
+  .m-default .metric-val { color: var(--text); }
+
+  /* DIVIDER */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+  /* WALLET FORM */
+  .wallet-form { display: flex; flex-direction: column; gap: 8px; }
+  .wallet-row { display: flex; gap: 8px; }
+  select, input[type="number"] {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  select:focus, input[type="number"]:focus { border-color: var(--accent); }
+  .wallet-btn {
+    background: var(--accent);
+    color: #fff; border: none;
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    font-size: 14px; font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer; width: 100%;
+    transition: opacity 0.15s;
+  }
+  .wallet-btn:active { opacity: 0.75; }
+  .wallet-msg { font-size: 13px; text-align: center; padding: 6px 0; }
+  .wallet-msg.ok { color: var(--green); }
+  .wallet-msg.err { color: var(--red); }
+
+  /* TX LIST */
+  .tx-row {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+  }
+  .tx-row:last-child { border-bottom: none; }
+  .tx-left { flex: 1; }
+  .tx-main { font-size: 13px; font-weight: 600; color: var(--text); }
+  .tx-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .pill {
+    font-size: 10px; font-weight: 700; padding: 3px 9px;
+    border-radius: 999px; text-transform: uppercase; flex-shrink: 0;
+  }
+  .pill-ok { background: var(--green-bg); color: var(--green); }
+  .pill-pending { background: var(--yellow-bg); color: var(--yellow); }
+  .pill-rejected { background: var(--red-bg); color: var(--red); }
+
+  /* DATE CALC */
+  .date-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  input[type="date"] {
+    flex: 1; min-width: 120px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 10px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    outline: none;
+    color-scheme: dark;
+  }
+  input[type="date"]:focus { border-color: var(--accent); }
+  .date-sep { font-size: 11px; color: var(--text2); flex-shrink: 0; }
+  .go-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    font-size: 13px; font-weight: 600;
+    color: var(--accent2);
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+  }
+  .go-btn:active { opacity: 0.7; }
+
+  /* PROFILE LINK */
+  .profile-link {
+    display: block; text-align: center;
+    padding: 12px;
+    background: rgba(124,111,255,0.08);
+    border: 1px solid rgba(124,111,255,0.2);
+    border-radius: var(--radius-sm);
+    color: var(--accent2);
+    text-decoration: none;
+    font-weight: 600; font-size: 14px;
+    margin-top: 4px;
+  }
+
+  .see-more {
+    width: 100%; padding: 10px;
+    margin-top: 8px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600;
+    color: var(--accent2);
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+  }
+
+  .sub-loading { color: var(--text2); font-size: 13px; text-align: center; padding: 14px 0; }
+  .sub-error { color: var(--red); font-size: 12px; padding: 8px; background: var(--red-bg); border-radius: var(--radius-sm); }
+
+  /* INSTALL BANNER */
+  .install-hint {
+    margin: 0 16px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--text2);
+    display: none;
+    line-height: 1.5;
+  }
+  .install-hint span { color: var(--accent2); font-weight: 600; }
+  .install-hint.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">B</div>
+  <div class="topbar-title">Bang Companion</div>
+  <div class="topbar-status checking" id="status-pill">Checking…</div>
+</div>
+
+<div class="search-wrap">
+  <div class="search-row">
+    <input class="search-input" id="emailInput" type="email" placeholder="Player email…" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
+    <button class="search-btn" id="searchBtn">Search</button>
+  </div>
+</div>
+
+<div class="install-hint" id="install-hint">
+  📱 <span>Add to Home Screen:</span> tap the Share button in Safari → "Add to Home Screen" to use as an app.
+</div>
+
+<div class="content" id="content">
+  <div class="placeholder">
+    <div class="placeholder-icon">🔍</div>
+    <p>Enter a player's email above to look up their profile, balances, and transactions.</p>
+  </div>
+</div>
+
+<script>
+const API = 'https://bo-api.bangcoins.com';
+const BO  = 'https://bo.bangcoins.com';
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+function fmtNum(v) {
+  if (v === null || v === undefined) return '-';
+  return parseFloat(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmt(v) { return (v === null || v === undefined || v === '') ? '-' : v; }
+function fmtDate(s) { return s ? s.split('T')[0] : '-'; }
+function fmtDT(s) {
+  if (!s) return '-';
+  var d = new Date(s);
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+function fmtLevel(v) {
+  var lvls = { '1':'Bronze','2':'Silver','3':'Gold','4':'Platinum','5':'Diamond','6':'Champion','7':'Sweeps Boss' };
+  return lvls[String(v)] || (v ? String(v) : '-');
+}
+function toDateStr(d) { return d.toISOString().split('T')[0]; }
+function getLastMonday() {
+  var d = new Date(), day = d.getDay(), diff = (day===0)?-6:1-day;
+  d.setDate(d.getDate()+diff-7); return toDateStr(d);
+}
+function getThisMonday() {
+  var d = new Date(), day = d.getDay(), diff = (day===0)?-6:1-day;
+  d.setDate(d.getDate()+diff); return toDateStr(d);
+}
+function at9amPT(ds) { return ds + 'T09:00:00-07:00'; }
+
+function getToken() { return localStorage.getItem('accessToken'); }
+
+async function apiFetch(path) {
+  var token = getToken();
+  if (!token) throw new Error('No access token. Open bo.bangcoins.com in another tab and log in first.');
+  var r = await fetch(API + path, {
+    credentials: 'include',
+    headers: { Accept: 'application/json', Authorization: 'Bearer ' + token }
+  });
+  if (!r.ok) throw new Error('API error: ' + r.status);
+  return r.json();
+}
+
+async function apiPost(path, body) {
+  var token = getToken();
+  if (!token) throw new Error('No access token.');
+  var r = await fetch(API + path, {
+    method: 'POST', credentials: 'include',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+// ── status check ─────────────────────────────────────────────────────────────
+async function checkStatus() {
+  var pill = document.getElementById('status-pill');
+  try {
+    var token = getToken();
+    if (!token) { pill.textContent = 'Not logged in'; pill.className = 'topbar-status error'; return; }
+    var r = await fetch(API + '/api/v1/user/all/?pageNo=1&limit=1&search=test', {
+      credentials: 'include',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (r.ok) { pill.textContent = 'Connected'; pill.className = 'topbar-status'; }
+    else { pill.textContent = 'Auth error'; pill.className = 'topbar-status error'; }
+  } catch(e) {
+    pill.textContent = 'Offline'; pill.className = 'topbar-status error';
+  }
+}
+
+// ── install hint ──────────────────────────────────────────────────────────────
+function isInStandaloneMode() {
+  return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+}
+if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !isInStandaloneMode()) {
+  document.getElementById('install-hint').classList.add('show');
+}
+
+// ── state ─────────────────────────────────────────────────────────────────────
+var currentPlayer = null;
+var txCurrentPage = 1, txTotalPages = 1, txAllLoaded = [];
+
+// ── render helpers ────────────────────────────────────────────────────────────
+function setContent(html) { document.getElementById('content').innerHTML = html; }
+function setSection(id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; }
+
+function pillClass(status) {
+  if (status === 'successful') return 'pill-ok';
+  if (status === 'pending') return 'pill-pending';
+  return 'pill-rejected';
+}
+
+// ── search ────────────────────────────────────────────────────────────────────
+async function lookupPlayer(email) {
+  setContent('<div class="loading-wrap"><div class="spinner"></div><p>Looking up player…</p></div>');
+  currentPlayer = null;
+  try {
+    var json = await apiFetch('/api/v1/user/all/?pageNo=1&limit=5&search=' + encodeURIComponent(email));
+    var players = json && json.data && json.data.data;
+    if (!players || players.length === 0) { setContent('<div class="error-box">No player found for <strong>' + email + '</strong></div>'); return; }
+    var player = players.find(p => p.email.toLowerCase() === email.toLowerCase()) || players[0];
+
+    // fetch detail
+    var now = new Date(), past = new Date(); past.setDate(past.getDate() - 30);
+    var startDate = encodeURIComponent(toDateStr(past) + 'T00:00:00-05:00');
+    var endDate = toDateStr(now);
+    var detail = await apiFetch('/api/v1/user?userId=' + player.user_id + '&startDate=' + startDate + '&endDate=' + endDate + '&transactionId=&providerTransactionId=&minAmount=&maxAmount=');
+    var ud = detail && detail.data && detail.data.getUser;
+    if (ud) {
+      player.promoEligible = ud.userDetails && ud.userDetails.PromoEligible;
+      player.vipTierName = ud.userDetails && ud.userDetails.VipTier && ud.userDetails.VipTier.name;
+      if (ud.userWallet) {
+        ud.userWallet.forEach(w => {
+          if (w.currencyCode === 'PSC') player.psc_balance = w.balance;
+          if (w.currencyCode === 'RSC') player.rsc_balance = w.balance;
+        });
+      }
+    }
+    currentPlayer = player;
+    renderPlayer(player);
+  } catch(e) {
+    setContent('<div class="error-box">' + e.message + '</div>');
+  }
+}
+
+// ── render player ─────────────────────────────────────────────────────────────
+function renderPlayer(p) {
+  var initials = ((p.firstName||'')[0]||(p.userName||'')[0]||'?').toUpperCase();
+  if (p.lastName) initials += p.lastName[0].toUpperCase();
+  var ggr = (parseFloat(p.sc_wagered_amount||0) - parseFloat(p.sc_won_amount||0)).toFixed(2);
+  var totalRedeemed = (parseFloat(p.sc_redeemed_amount||0) + parseFloat(p.sc_redeemed_offline||0)).toFixed(2);
+  var profileUrl = BO + '/en/players/' + p.user_id;
+
+  var savedStart = localStorage.getItem('bang-calc-start') || getLastMonday();
+  var savedEnd = localStorage.getItem('bang-calc-end') || getThisMonday();
+
+  setContent(`
+    <div class="card">
+      <div class="card-header">
+        <div class="avatar">${initials}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="player-name">${fmt(p.firstName)} ${fmt(p.lastName)}</div>
+          <div class="player-username">@${fmt(p.userName)}</div>
+          <div class="badges">
+            <span class="badge ${p.isActive ? 'badge-active' : 'badge-inactive'}">${p.isActive ? 'Active' : 'Inactive'}</span>
+            <span class="badge ${p.promoEligible ? 'badge-promo-yes' : 'badge-promo-no'}">Promo: ${p.promoEligible ? 'Yes' : 'No'}</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+
+        <div class="ggr-row">
+          <div class="ggr-label">GGR</div>
+          <div class="ggr-val">$${fmtNum(ggr)}</div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-item"><div class="info-label">State</div><div class="info-val">${fmt(p.stateCode)}</div></div>
+          <div class="info-item"><div class="info-label">KYC</div><div class="info-val">${fmt(p.kycStatus)}</div></div>
+          <div class="info-item"><div class="info-label">Level</div><div class="info-val">${fmtLevel(p.level)}</div></div>
+          <div class="info-item"><div class="info-label">Member since</div><div class="info-val">${fmtDate(p.createdAt)}</div></div>
+        </div>
+
+        <hr class="divider">
+        <div class="section-label">Balances</div>
+        <div class="metrics">
+          <div class="metric m-blue"><div class="metric-label">PSC Balance</div><div class="metric-val">$${fmtNum(p.psc_balance||p.SC_balance||0)}</div></div>
+          <div class="metric m-orange"><div class="metric-label">RSC Balance</div><div class="metric-val">$${fmtNum(p.rsc_balance||0)}</div></div>
+        </div>
+
+        <hr class="divider">
+        <div class="section-label">SC Totals</div>
+        <div class="metrics">
+          <div class="metric m-green"><div class="metric-label">Total purchased</div><div class="metric-val">$${fmtNum(p.sc_purchased_amount)}</div></div>
+          <div class="metric m-yellow"><div class="metric-label">Purchased offline</div><div class="metric-val">$${fmtNum(p.sc_purchased_offline)}</div></div>
+          <div class="metric m-red"><div class="metric-label">Total redeemed</div><div class="metric-val">$${totalRedeemed}</div></div>
+          <div class="metric m-default"><div class="metric-label">Redeemed offline</div><div class="metric-val">$${fmtNum(p.sc_redeemed_offline)}</div></div>
+        </div>
+
+        <hr class="divider">
+        <div class="section-label">Manage Balance</div>
+        <div class="wallet-form">
+          <div class="wallet-row">
+            <select id="w-purpose"><option value="purchase">Purchase</option><option value="redeem">Redeem</option></select>
+            <select id="w-currency"><option value="PSC">PSC</option><option value="RSC">RSC</option><option value="GC">GC</option></select>
+          </div>
+          <div class="wallet-row">
+            <input type="number" id="w-amount" placeholder="Amount" min="0.01" step="0.01" />
+          </div>
+          <button class="wallet-btn" id="w-btn">Apply</button>
+          <div class="wallet-msg" id="w-msg"></div>
+        </div>
+
+        <hr class="divider">
+        <div class="section-label">Recent Transactions</div>
+        <div id="tx-list"><div class="sub-loading">Loading…</div></div>
+
+        <hr class="divider">
+        <div class="section-label">Recent Redemptions</div>
+        <div id="redemptions-list"><div class="sub-loading">Loading…</div></div>
+
+        <hr class="divider">
+        <div class="section-label">Purchases Calculator</div>
+        <div class="date-row">
+          <input type="date" id="calc-start" value="${savedStart}" />
+          <span class="date-sep">to</span>
+          <input type="date" id="calc-end" value="${savedEnd}" />
+          <button class="go-btn" id="calc-btn">Go</button>
+        </div>
+        <div id="calc-result"><div class="sub-loading">Loading…</div></div>
+
+        <hr class="divider">
+        <div class="section-label">Activity</div>
+        <div class="metrics">
+          <div class="metric m-default"><div class="metric-label">Games played</div><div class="metric-val">${fmt(p.total_game_played)}</div></div>
+          <div class="metric m-default"><div class="metric-label">Bets</div><div class="metric-val">${parseInt(p.bet_count||0).toLocaleString()}</div></div>
+          <div class="metric m-default"><div class="metric-label">Wins</div><div class="metric-val">${parseInt(p.win_count||0).toLocaleString()}</div></div>
+          <div class="metric m-purple"><div class="metric-label">Referral earned</div><div class="metric-val">$${fmtNum(p.bonus_referral_earned)}</div></div>
+        </div>
+
+        <hr class="divider">
+        <div class="section-label">Today's Global Activity</div>
+        <div id="dashboard-section"><div class="sub-loading">Loading…</div></div>
+
+        <hr class="divider">
+        <a class="profile-link" href="${profileUrl}" target="_blank">Open full profile ↗</a>
+      </div>
+    </div>
+  `);
+
+  // events
+  document.getElementById('w-btn').addEventListener('click', submitWallet);
+  document.getElementById('calc-btn').addEventListener('click', fetchCalc);
+
+  // load sections
+  txCurrentPage = 1; txAllLoaded = []; txTotalPages = 1;
+  loadTransactions();
+  loadRedemptions();
+  fetchCalc();
+  loadDashboard();
+}
+
+// ── wallet ────────────────────────────────────────────────────────────────────
+async function submitWallet() {
+  if (!currentPlayer) return;
+  var amount = parseFloat(document.getElementById('w-amount').value);
+  var purpose = document.getElementById('w-purpose').value;
+  var currency = document.getElementById('w-currency').value;
+  var msgEl = document.getElementById('w-msg');
+  if (!amount || amount <= 0) { msgEl.textContent = 'Enter a valid amount.'; msgEl.className = 'wallet-msg err'; return; }
+  msgEl.textContent = 'Processing…'; msgEl.className = 'wallet-msg';
+  try {
+    var json = await apiPost('/api/v1/wallet/manage-wallet', {
+      amount: amount, purpose: purpose, currencyCode: currency, userId: String(currentPlayer.user_id)
+    });
+    if (json && json.errors && json.errors.message) throw new Error(json.errors.message);
+    msgEl.textContent = '✓ Done!'; msgEl.className = 'wallet-msg ok';
+    document.getElementById('w-amount').value = '';
+    setTimeout(() => lookupPlayer(currentPlayer.email), 1200);
+  } catch(e) {
+    msgEl.textContent = e.message; msgEl.className = 'wallet-msg err';
+  }
+}
+
+// ── transactions ──────────────────────────────────────────────────────────────
+async function loadTransactions() {
+  if (!currentPlayer) return;
+  try {
+    var now = new Date(), past = new Date(); past.setDate(past.getDate()-30);
+    var start = encodeURIComponent(toDateStr(past)+'T00:00:00-05:00');
+    var end = toDateStr(now);
+    var json = await apiFetch('/api/v1/reports/transactions?limit=10&pageNo=1&userId='+currentPlayer.user_id+'&startDate='+start+'&endDate='+end+'&transactionId=&providerTransactionId=&minAmount=&maxAmount=');
+    var data = (json&&json.data&&json.data.data)||[];
+    txTotalPages = (json&&json.data&&parseInt(json.data.totalPages))||1;
+    txAllLoaded = data;
+    renderTxSection();
+  } catch(e) {
+    setSection('tx-list', '<div class="sub-error">'+e.message+'</div>');
+  }
+}
+
+async function loadMoreTx() {
+  txCurrentPage++;
+  try {
+    var now = new Date(), past = new Date(); past.setDate(past.getDate()-30);
+    var start = encodeURIComponent(toDateStr(past)+'T00:00:00-05:00');
+    var end = toDateStr(now);
+    var json = await apiFetch('/api/v1/reports/transactions?limit=10&pageNo='+txCurrentPage+'&userId='+currentPlayer.user_id+'&startDate='+start+'&endDate='+end+'&transactionId=&providerTransactionId=&minAmount=&maxAmount=');
+    txAllLoaded = txAllLoaded.concat((json&&json.data&&json.data.data)||[]);
+    txTotalPages = (json&&json.data&&parseInt(json.data.totalPages))||1;
+    renderTxSection();
+  } catch(e) {}
+}
+
+function renderTxSection() {
+  var html = txAllLoaded.map(t => {
+    var isFyntek = t.payment_provider && t.payment_provider.toLowerCase() === 'fyntek';
+    var sc = t.sccoin ? parseFloat(t.sccoin).toFixed(2) : '-';
+    var amtStr = isFyntek && t.amount ? '$'+parseFloat(t.amount).toFixed(2)+' · '+sc+' SC' : sc+' SC';
+    var provider = t.payment_provider || t.admin || 'System';
+    return `<div class="tx-row">
+      <div class="tx-left">
+        <div class="tx-main">${provider} · ${amtStr}</div>
+        <div class="tx-sub">${fmtDT(t.created_at)}${t.purpose?' · '+t.purpose:''}${t.promocode?' · '+t.promocode:''}</div>
+      </div>
+      <span class="pill ${pillClass(t.status)}">${fmt(t.status)}</span>
+    </div>`;
+  }).join('');
+  if (txCurrentPage < txTotalPages) {
+    html += '<button class="see-more" id="tx-more-btn">See more ('+txCurrentPage+'/'+txTotalPages+')</button>';
+  }
+  setSection('tx-list', html || '<div class="sub-loading">No transactions found.</div>');
+  var btn = document.getElementById('tx-more-btn');
+  if (btn) btn.addEventListener('click', loadMoreTx);
+}
+
+// ── redemptions ───────────────────────────────────────────────────────────────
+async function loadRedemptions() {
+  if (!currentPlayer) return;
+  try {
+    var now = new Date(), past = new Date(); past.setDate(past.getDate()-30);
+    var start = encodeURIComponent(toDateStr(past)+'T00:00:00-05:00');
+    var end = toDateStr(now);
+    var json = await apiFetch('/api/v1/reports/transactions?limit=50&pageNo=1&userId='+currentPlayer.user_id+'&startDate='+start+'&endDate='+end+'&transactionId=&providerTransactionId=&minAmount=&maxAmount=');
+    var data = ((json&&json.data&&json.data.data)||[]).filter(t => t.purpose === 'redeem');
+    if (!data.length) { setSection('redemptions-list', '<div class="sub-loading">No redemptions found.</div>'); return; }
+    var html = data.map(r => {
+      var displayAmt = r.amount ? '$'+fmtNum(r.amount) : (r.sccoin ? fmtNum(r.sccoin)+' SC' : '-');
+      return `<div class="tx-row">
+        <div class="tx-left">
+          <div class="tx-main">${displayAmt}</div>
+          <div class="tx-sub">${fmtDate(r.created_at)}</div>
+        </div>
+        <span class="pill ${pillClass(r.status)}">${fmt(r.status)}</span>
+      </div>`;
+    }).join('');
+    setSection('redemptions-list', html);
+  } catch(e) {
+    setSection('redemptions-list', '<div class="sub-error">'+e.message+'</div>');
+  }
+}
+
+// ── calculator ────────────────────────────────────────────────────────────────
+async function fetchCalc() {
+  if (!currentPlayer) return;
+  var startEl = document.getElementById('calc-start');
+  var endEl = document.getElementById('calc-end');
+  if (!startEl || !endEl) return;
+  var startDate = startEl.value, endDate = endEl.value;
+  if (!startDate || !endDate) return;
+  localStorage.setItem('bang-calc-start', startDate);
+  localStorage.setItem('bang-calc-end', endDate);
+  setSection('calc-result', '<div class="sub-loading">Fetching…</div>');
+  try {
+    var allFyntek = [], allRedemptions = [], pageNo = 1, totalPages = 1;
+    while (pageNo <= totalPages) {
+      var url = '/api/v1/reports/transactions?limit=100&pageNo='+pageNo+'&userId='+currentPlayer.user_id+'&startDate='+encodeURIComponent(at9amPT(startDate))+'&endDate='+encodeURIComponent(at9amPT(endDate))+'&transactionId=&providerTransactionId=&minAmount=&maxAmount=';
+      var json = await apiFetch(url);
+      var data = (json&&json.data&&json.data.data)||[];
+      totalPages = (json&&json.data&&parseInt(json.data.totalPages))||1;
+      data.forEach(t => {
+        if (t.payment_provider && t.payment_provider.toLowerCase()==='fyntek' && t.status==='successful') allFyntek.push(t);
+        if (t.purpose==='redeem' && t.status==='successful') allRedemptions.push(t);
+      });
+      pageNo++;
+    }
+    var total = allFyntek.reduce((s,t) => s+parseFloat(t.amount||0), 0);
+    var redeemTotal = allRedemptions.reduce((s,t) => s+parseFloat(t.sccoin||0), 0);
+    setSection('calc-result', `
+      <div class="metrics">
+        <div class="metric m-green"><div class="metric-label">Total purchased</div><div class="metric-val">$${fmtNum(total)}</div></div>
+        <div class="metric m-red"><div class="metric-label">Total redeemed SC</div><div class="metric-val">${fmtNum(redeemTotal)}</div></div>
+      </div>
+    `);
+  } catch(e) {
+    setSection('calc-result', '<div class="sub-error">'+e.message+'</div>');
+  }
+}
+
+// ── dashboard ─────────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    var json = await apiFetch('/api/v1/reports/dashboard-summary');
+    var rows = json&&json.data&&json.data.data;
+    var data = rows&&rows[rows.length-1];
+    if (!data) { setSection('dashboard-section', '<div class="sub-loading">No data.</div>'); return; }
+    var ratio = data.purchased > 0 ? ((data.redeemed/data.purchased)*100).toFixed(1) : '0.0';
+    setSection('dashboard-section', `
+      <div class="metrics">
+        <div class="metric m-green"><div class="metric-label">Deposits today</div><div class="metric-val">$${fmtNum(data.purchased)}</div></div>
+        <div class="metric m-red"><div class="metric-label">Withdrawals today</div><div class="metric-val">$${fmtNum(data.redeemed)}</div></div>
+        <div class="metric m-purple" style="grid-column:span 2"><div class="metric-label">Redemption ratio</div><div class="metric-val">${ratio}%</div></div>
+      </div>
+    `);
+  } catch(e) {
+    setSection('dashboard-section', '<div class="sub-error">'+e.message+'</div>');
+  }
+}
+
+// ── events ────────────────────────────────────────────────────────────────────
+document.getElementById('searchBtn').addEventListener('click', () => {
+  var email = document.getElementById('emailInput').value.trim();
+  if (email) lookupPlayer(email);
+});
+document.getElementById('emailInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { var email = e.target.value.trim(); if (email) lookupPlayer(email); }
+});
+
+// init
+checkStatus();
+</script>
+</body>
+</html>
