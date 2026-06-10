@@ -261,12 +261,10 @@
   const API = 'https://still-field-17ffbang-proxy.santiaguito-srl76.workers.dev/api';
   const BO  = 'https://bo.bangcoins.com';
 
-// ── token storage ─────────────────────────────────────────────────────────────
 function saveToken(t) { localStorage.setItem('bang-token', t); }
 function getToken() { return localStorage.getItem('bang-token'); }
 function clearToken() { localStorage.removeItem('bang-token'); }
 
-// ── helpers ───────────────────────────────────────────────────────────────────
 function fmtNum(v) { if (v===null||v===undefined) return '-'; return parseFloat(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function fmt(v) { return (v===null||v===undefined||v==='') ? '-' : v; }
 function fmtDate(s) { return s ? s.split('T')[0] : '-'; }
@@ -277,6 +275,11 @@ function getLastMonday() { var d=new Date(),day=d.getDay(),diff=(day===0)?-6:1-d
 function getThisMonday() { var d=new Date(),day=d.getDay(),diff=(day===0)?-6:1-day; d.setDate(d.getDate()+diff); return toDateStr(d); }
 function at9amPT(ds) { return ds+'T09:00:00-07:00'; }
 function pillClass(s) { return s==='successful'?'pill-ok':s==='pending'?'pill-pending':'pill-rejected'; }
+
+// FIX: helper para construir URL de transactions sin params vacios
+function txUrl(extra, userId, start, end) {
+  return '/v1/reports/transactions?userId='+userId+'&startDate='+start+'&endDate='+end+extra;
+}
 
 async function apiFetch(path, opts) {
   var token = getToken();
@@ -292,7 +295,6 @@ async function apiPost(path, body) {
   return apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
 }
 
-// ── login ─────────────────────────────────────────────────────────────────────
 function showLogin() {
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app-screen').classList.remove('show');
@@ -333,19 +335,16 @@ document.getElementById('login-email').addEventListener('keydown', e => { if(e.k
 document.getElementById('login-password').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 document.getElementById('logout-btn').addEventListener('click', () => { clearToken(); showLogin(); });
 
-// ── install hint ──────────────────────────────────────────────────────────────
 if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone) {
   document.getElementById('install-hint').classList.add('show');
 }
 
-// ── state ─────────────────────────────────────────────────────────────────────
 var currentPlayer = null;
 var txCurrentPage=1, txTotalPages=1, txAllLoaded=[];
 
 function setContent(html) { document.getElementById('content').innerHTML = html; }
 function setSection(id, html) { var el=document.getElementById(id); if(el) el.innerHTML=html; }
 
-// ── search ────────────────────────────────────────────────────────────────────
 async function lookupPlayer(email) {
   setContent('<div class="loading-wrap"><div class="spinner"></div><p>Looking up player…</p></div>');
   currentPlayer = null;
@@ -354,12 +353,10 @@ async function lookupPlayer(email) {
     var players = json&&json.data&&json.data.data;
     if (!players||players.length===0) { setContent('<div class="error-box">No player found for <strong>'+email+'</strong></div>'); return; }
     var player = players.find(p=>p.email.toLowerCase()===email.toLowerCase())||players[0];
-
     var now=new Date(), past=new Date(); past.setDate(past.getDate()-30);
-    // FIX: endDate now has full timestamp and is encoded
     var startDate=encodeURIComponent(toDateStr(past)+'T00:00:00-05:00');
     var endDate=encodeURIComponent(toDateStr(now)+'T23:59:59-05:00');
-    var detail = await apiFetch('/v1/user?userId='+player.user_id+'&startDate='+startDate+'&endDate='+endDate+'&transactionId=&providerTransactionId=&minAmount=&maxAmount=');
+    var detail = await apiFetch('/v1/user?userId='+player.user_id+'&startDate='+startDate+'&endDate='+endDate);
     var ud = detail&&detail.data&&detail.data.getUser;
     if (ud) {
       player.promoEligible = ud.userDetails&&ud.userDetails.PromoEligible;
@@ -372,7 +369,6 @@ async function lookupPlayer(email) {
   }
 }
 
-// ── render ────────────────────────────────────────────────────────────────────
 function renderPlayer(p) {
   var initials = ((p.firstName||'')[0]||(p.userName||'')[0]||'?').toUpperCase();
   if (p.lastName) initials += p.lastName[0].toUpperCase();
@@ -469,7 +465,6 @@ function renderPlayer(p) {
   loadTransactions(); loadRedemptions(); fetchCalc(); loadDashboard();
 }
 
-// ── wallet ────────────────────────────────────────────────────────────────────
 async function submitWallet() {
   if (!currentPlayer) return;
   var amount=parseFloat(document.getElementById('w-amount').value);
@@ -487,15 +482,14 @@ async function submitWallet() {
   } catch(e) { msgEl.textContent=e.message; msgEl.className='wallet-msg err'; }
 }
 
-// ── transactions ──────────────────────────────────────────────────────────────
 async function loadTransactions() {
   if (!currentPlayer) return;
   try {
     var now=new Date(),past=new Date(); past.setDate(past.getDate()-30);
-    // FIX: both dates now have full timestamps and are encoded
     var start=encodeURIComponent(toDateStr(past)+'T00:00:00-05:00');
     var end=encodeURIComponent(toDateStr(now)+'T23:59:59-05:00');
-    var json = await apiFetch('/v1/reports/transactions?limit=10&pageNo=1&userId='+currentPlayer.user_id+'&startDate='+start+'&endDate='+end+'&transactionId=&providerTransactionId=&minAmount=&maxAmount=');
+    // FIX: sin params vacios, con limit y pageNo
+    var json = await apiFetch('/v1/reports/transactions?limit=10&pageNo=1&userId='+currentPlayer.user_id+'&startDate='+start+'&endDate='+end);
     txTotalPages=(json&&json.data&&parseInt(json.data.totalPages))||1;
     txAllLoaded=(json&&json.data&&json.data.data)||[];
     renderTxSection();
@@ -506,10 +500,10 @@ async function loadMoreTx() {
   txCurrentPage++;
   try {
     var now=new Date(),past=new Date(); past.setDate(past.getDate()-30);
-    // FIX: both dates now have full timestamps and are encoded
     var start=encodeURIComponent(toDateStr(past)+'T00:00:00-05:00');
     var end=encodeURIComponent(toDateStr(now)+'T23:59:59-05:00');
-    var json = await apiFetch('/v1/reports/transactions?limit=10&pageNo='+txCurrentPage+'&userId='+currentPlayer.user_id+'&startDate='+start+'&endDate='+end+'&transactionId=&providerTransactionId=&minAmount=&maxAmount=');
+    // FIX: sin params vacios
+    var json = await apiFetch('/v1/reports/transactions?limit=10&pageNo='+txCurrentPage+'&userId='+currentPlayer.user_id+'&startDate='+start+'&endDate='+end);
     txAllLoaded=txAllLoaded.concat((json&&json.data&&json.data.data)||[]);
     txTotalPages=(json&&json.data&&parseInt(json.data.totalPages))||1;
     renderTxSection();
@@ -530,15 +524,14 @@ function renderTxSection() {
   if (btn) btn.addEventListener('click', loadMoreTx);
 }
 
-// ── redemptions ───────────────────────────────────────────────────────────────
 async function loadRedemptions() {
   if (!currentPlayer) return;
   try {
     var now=new Date(),past=new Date(); past.setDate(past.getDate()-30);
-    // FIX: both dates now have full timestamps and are encoded
     var start=encodeURIComponent(toDateStr(past)+'T00:00:00-05:00');
     var end=encodeURIComponent(toDateStr(now)+'T23:59:59-05:00');
-    var json = await apiFetch('/v1/reports/transactions?limit=50&pageNo=1&userId='+currentPlayer.user_id+'&startDate='+start+'&endDate='+end+'&transactionId=&providerTransactionId=&minAmount=&maxAmount=');
+    // FIX: sin params vacios
+    var json = await apiFetch('/v1/reports/transactions?limit=50&pageNo=1&userId='+currentPlayer.user_id+'&startDate='+start+'&endDate='+end);
     var data=((json&&json.data&&json.data.data)||[]).filter(t=>t.purpose==='redeem');
     if (!data.length) { setSection('redemptions-list','<div class="sub-loading">No redemptions found.</div>'); return; }
     setSection('redemptions-list', data.map(r=>{
@@ -548,7 +541,6 @@ async function loadRedemptions() {
   } catch(e) { setSection('redemptions-list','<div class="sub-error">'+e.message+'</div>'); }
 }
 
-// ── calculator ────────────────────────────────────────────────────────────────
 async function fetchCalc() {
   if (!currentPlayer) return;
   var startEl=document.getElementById('calc-start'), endEl=document.getElementById('calc-end');
@@ -561,8 +553,8 @@ async function fetchCalc() {
   try {
     var allFyntek=[],allRedemptions=[],pageNo=1,totalPages=1;
     while (pageNo<=totalPages) {
-      // FIX: endDate uses end-of-day timestamp instead of 9am
-      var url='/v1/reports/transactions?limit=100&pageNo='+pageNo+'&userId='+currentPlayer.user_id+'&startDate='+encodeURIComponent(at9amPT(startDate))+'&endDate='+encodeURIComponent(endDate+'T23:59:59-07:00')+'&transactionId=&providerTransactionId=&minAmount=&maxAmount=';
+      // FIX: sin params vacios
+      var url='/v1/reports/transactions?limit=100&pageNo='+pageNo+'&userId='+currentPlayer.user_id+'&startDate='+encodeURIComponent(at9amPT(startDate))+'&endDate='+encodeURIComponent(endDate+'T23:59:59-07:00');
       var json=await apiFetch(url);
       var data=(json&&json.data&&json.data.data)||[];
       totalPages=(json&&json.data&&parseInt(json.data.totalPages))||1;
@@ -575,7 +567,6 @@ async function fetchCalc() {
   } catch(e) { setSection('calc-result','<div class="sub-error">'+e.message+'</div>'); }
 }
 
-// ── dashboard ─────────────────────────────────────────────────────────────────
 async function loadDashboard() {
   try {
     var json=await apiFetch('/v1/reports/dashboard-summary');
@@ -587,11 +578,9 @@ async function loadDashboard() {
   } catch(e) { setSection('dashboard-section','<div class="sub-error">'+e.message+'</div>'); }
 }
 
-// ── search events ─────────────────────────────────────────────────────────────
 document.getElementById('searchBtn').addEventListener('click', ()=>{ var e=document.getElementById('emailInput').value.trim(); if(e) lookupPlayer(e); });
 document.getElementById('emailInput').addEventListener('keydown', e=>{ if(e.key==='Enter'){ var em=e.target.value.trim(); if(em) lookupPlayer(em); }});
 
-// ── init ──────────────────────────────────────────────────────────────────────
 var DEFAULT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEyLCJ1c2VybmFtZSI6InNhbnRpYWd1aXRvLnNybDc2QGdtYWlsLmNvbSIsInR5cGUiOiJsb2dpbiIsInBlcm1pc3Npb24iOnsiQU1PRSI6W10sIkJvbnVzIjpbXSwiUGxheWVycyI6WyJSIiwiVSIsIlQiXSwiUmVwb3J0cyI6WyJSIl0sIlBhY2thZ2VzIjpbXSwiQ2hhdE1vZHVsZSI6W10sIkFkbWluaXN0cmF0b3IiOltdLCJQYXltZW50U3dpdGNoIjpbXSwiQmxvY2tJcEFkZHJlc3MiOltdLCJQYXltZW50R2F0ZXdheSI6W10sIkFmZmlsaWF0ZU1vZHVsZSI6W10sIkNvdW50cmllc1N0YXRlcyI6W10sIkFwcENvbmZpZ3VyYXRpb24iOltdLCJDYXNpbm9NYW5hZ2VtZW50IjpbXSwiUGxheWVyRW5nYWdlbWVudCI6W10sIkNvbnRlbnRNYW5hZ2VtZW50IjpbXX0sImlhdCI6MTc3OTA3NzUwMywiZXhwIjo0MjkzMzI5OTI4fQ.ckzNGltWgWBnBN_sLxjSrQkFqC_T4aJuDNedx0HlE-U';
 if (!getToken()) saveToken(DEFAULT_TOKEN);
 showApp();
