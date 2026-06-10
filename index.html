@@ -34,7 +34,6 @@
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; overscroll-behavior: none; }
 
-  /* LOGIN SCREEN */
   .login-screen {
     min-height: 100dvh;
     display: flex; flex-direction: column;
@@ -79,7 +78,6 @@
   .login-btn:active { opacity: 0.8; }
   .login-error { color: var(--red); font-size: 13px; text-align: center; background: var(--red-bg); padding: 10px; border-radius: var(--radius-sm); }
 
-  /* MAIN APP */
   .app-screen { display: none; }
   .app-screen.show { display: block; }
 
@@ -260,7 +258,7 @@
 </div>
 
 <script>
- const API = 'https://still-field-17ffbang-proxy.santiaguito-srl76.workers.dev/api';
+  const API = 'https://still-field-17ffbang-proxy.santiaguito-srl76.workers.dev/api';
   const BO  = 'https://bo.bangcoins.com';
 
 // ── token storage ─────────────────────────────────────────────────────────────
@@ -358,8 +356,9 @@ async function lookupPlayer(email) {
     var player = players.find(p=>p.email.toLowerCase()===email.toLowerCase())||players[0];
 
     var now=new Date(), past=new Date(); past.setDate(past.getDate()-30);
+    // FIX: endDate now has full timestamp and is encoded
     var startDate=encodeURIComponent(toDateStr(past)+'T00:00:00-05:00');
-    var endDate=toDateStr(now);
+    var endDate=encodeURIComponent(toDateStr(now)+'T23:59:59-05:00');
     var detail = await apiFetch('/v1/user?userId='+player.user_id+'&startDate='+startDate+'&endDate='+endDate+'&transactionId=&providerTransactionId=&minAmount=&maxAmount=');
     var ud = detail&&detail.data&&detail.data.getUser;
     if (ud) {
@@ -493,7 +492,9 @@ async function loadTransactions() {
   if (!currentPlayer) return;
   try {
     var now=new Date(),past=new Date(); past.setDate(past.getDate()-30);
-    var start=encodeURIComponent(toDateStr(past)+'T00:00:00-05:00'), end=toDateStr(now);
+    // FIX: both dates now have full timestamps and are encoded
+    var start=encodeURIComponent(toDateStr(past)+'T00:00:00-05:00');
+    var end=encodeURIComponent(toDateStr(now)+'T23:59:59-05:00');
     var json = await apiFetch('/v1/reports/transactions?limit=10&pageNo=1&userId='+currentPlayer.user_id+'&startDate='+start+'&endDate='+end+'&transactionId=&providerTransactionId=&minAmount=&maxAmount=');
     txTotalPages=(json&&json.data&&parseInt(json.data.totalPages))||1;
     txAllLoaded=(json&&json.data&&json.data.data)||[];
@@ -505,7 +506,9 @@ async function loadMoreTx() {
   txCurrentPage++;
   try {
     var now=new Date(),past=new Date(); past.setDate(past.getDate()-30);
-    var start=encodeURIComponent(toDateStr(past)+'T00:00:00-05:00'), end=toDateStr(now);
+    // FIX: both dates now have full timestamps and are encoded
+    var start=encodeURIComponent(toDateStr(past)+'T00:00:00-05:00');
+    var end=encodeURIComponent(toDateStr(now)+'T23:59:59-05:00');
     var json = await apiFetch('/v1/reports/transactions?limit=10&pageNo='+txCurrentPage+'&userId='+currentPlayer.user_id+'&startDate='+start+'&endDate='+end+'&transactionId=&providerTransactionId=&minAmount=&maxAmount=');
     txAllLoaded=txAllLoaded.concat((json&&json.data&&json.data.data)||[]);
     txTotalPages=(json&&json.data&&parseInt(json.data.totalPages))||1;
@@ -532,7 +535,9 @@ async function loadRedemptions() {
   if (!currentPlayer) return;
   try {
     var now=new Date(),past=new Date(); past.setDate(past.getDate()-30);
-    var start=encodeURIComponent(toDateStr(past)+'T00:00:00-05:00'), end=toDateStr(now);
+    // FIX: both dates now have full timestamps and are encoded
+    var start=encodeURIComponent(toDateStr(past)+'T00:00:00-05:00');
+    var end=encodeURIComponent(toDateStr(now)+'T23:59:59-05:00');
     var json = await apiFetch('/v1/reports/transactions?limit=50&pageNo=1&userId='+currentPlayer.user_id+'&startDate='+start+'&endDate='+end+'&transactionId=&providerTransactionId=&minAmount=&maxAmount=');
     var data=((json&&json.data&&json.data.data)||[]).filter(t=>t.purpose==='redeem');
     if (!data.length) { setSection('redemptions-list','<div class="sub-loading">No redemptions found.</div>'); return; }
@@ -556,7 +561,8 @@ async function fetchCalc() {
   try {
     var allFyntek=[],allRedemptions=[],pageNo=1,totalPages=1;
     while (pageNo<=totalPages) {
-      var url='/v1/reports/transactions?limit=100&pageNo='+pageNo+'&userId='+currentPlayer.user_id+'&startDate='+encodeURIComponent(at9amPT(startDate))+'&endDate='+encodeURIComponent(at9amPT(endDate))+'&transactionId=&providerTransactionId=&minAmount=&maxAmount=';
+      // FIX: endDate uses end-of-day timestamp instead of 9am
+      var url='/v1/reports/transactions?limit=100&pageNo='+pageNo+'&userId='+currentPlayer.user_id+'&startDate='+encodeURIComponent(at9amPT(startDate))+'&endDate='+encodeURIComponent(endDate+'T23:59:59-07:00')+'&transactionId=&providerTransactionId=&minAmount=&maxAmount=';
       var json=await apiFetch(url);
       var data=(json&&json.data&&json.data.data)||[];
       totalPages=(json&&json.data&&parseInt(json.data.totalPages))||1;
@@ -587,7 +593,7 @@ document.getElementById('emailInput').addEventListener('keydown', e=>{ if(e.key=
 
 // ── init ──────────────────────────────────────────────────────────────────────
 var DEFAULT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjEyLCJ1c2VybmFtZSI6InNhbnRpYWd1aXRvLnNybDc2QGdtYWlsLmNvbSIsInR5cGUiOiJsb2dpbiIsInBlcm1pc3Npb24iOnsiQU1PRSI6W10sIkJvbnVzIjpbXSwiUGxheWVycyI6WyJSIiwiVSIsIlQiXSwiUmVwb3J0cyI6WyJSIl0sIlBhY2thZ2VzIjpbXSwiQ2hhdE1vZHVsZSI6W10sIkFkbWluaXN0cmF0b3IiOltdLCJQYXltZW50U3dpdGNoIjpbXSwiQmxvY2tJcEFkZHJlc3MiOltdLCJQYXltZW50R2F0ZXdheSI6W10sIkFmZmlsaWF0ZU1vZHVsZSI6W10sIkNvdW50cmllc1N0YXRlcyI6W10sIkFwcENvbmZpZ3VyYXRpb24iOltdLCJDYXNpbm9NYW5hZ2VtZW50IjpbXSwiUGxheWVyRW5nYWdlbWVudCI6W10sIkNvbnRlbnRNYW5hZ2VtZW50IjpbXX0sImlhdCI6MTc3OTA3NzUwMywiZXhwIjo0MjkzMzI5OTI4fQ.ckzNGltWgWBnBN_sLxjSrQkFqC_T4aJuDNedx0HlE-U';
-  if (!getToken()) saveToken(DEFAULT_TOKEN);
+if (!getToken()) saveToken(DEFAULT_TOKEN);
 showApp();
 </script>
 </body>
